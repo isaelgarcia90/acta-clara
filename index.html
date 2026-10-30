@@ -60,6 +60,8 @@ h1{font-family:var(--display);font-size:2rem;margin:0;text-wrap:balance}
 .btn{all:unset;cursor:pointer;background:var(--accent);color:var(--panel);font-weight:700;border-radius:99px;padding:12px 18px;font-size:1.05rem;text-align:center;flex:1}
 .btn:focus-visible{box-shadow:0 0 0 3px var(--ink)}
 .btn[disabled]{opacity:.4;cursor:default}
+#mic[aria-pressed="true"]{background:var(--warn);color:var(--panel);border-color:var(--warn)}
+.nota{align-self:center;text-align:center;color:var(--muted);font-size:.9rem;max-width:34ch}
 .ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);flex:0 0 auto}
 @media (prefers-reduced-motion:no-preference){.m{animation:in .25s ease}@keyframes in{from{opacity:.3;transform:translateY(4px)}}}
 </style>
@@ -87,7 +89,7 @@ h1{font-family:var(--display);font-size:2rem;margin:0;text-wrap:balance}
   <div class="phone" aria-label="Simulación de chat">
     <div class="top"><span>Acta Clara<br><small>Asistente del Registro Civil</small></span><button type="button" id="voz" class="voz" aria-pressed="true">🔊 Voz activada</button></div>
     <div class="msgs" id="msgs" aria-live="polite"></div>
-    <div class="bar"><button class="btn ghost" id="reset" type="button">Reiniciar</button><button class="btn" id="next" type="button">Enviar fotos</button></div>
+    <div class="bar"><button class="btn ghost" id="reset" type="button">Reiniciar</button><button class="btn ghost" id="mic" type="button" aria-pressed="false">🎤 Hablar</button><button class="btn" id="next" type="button">Enviar fotos</button></div>
   </div>
 </div>
 
@@ -162,7 +164,8 @@ function pintarVoz(){const b=document.querySelector("#voz");b.setAttribute("aria
 function docHtml(title,rows,blur){return `<div class="doc" style="${blur?"filter:blur(3px)":""}"><h4>${title}</h4>${rows.map(r=>`<div>${r}</div>`).join("")}</div>`;}
 const FUENTE="Plataforma Nacional del Registro Civil (miregistrocivil.gob.mx), consultado 30/10/2026";
 
-function start(cs){
+let voz=null;
+function start(cs,meText){
   cur=cs;step=0;msgs.innerHTML="";if(window.speechSynthesis)speechSynthesis.cancel();
   document.querySelectorAll(".case").forEach(b=>b.setAttribute("aria-pressed",b.dataset.id==cs.id));
   const intro=cs.hijo?{
@@ -180,7 +183,7 @@ function start(cs){
     :{
       me:"Hola, en el banco me rechazaron un trámite y no sé si es por mi acta",
       bot:"Hola, buenas tardes. Le ayudo a revisarlo.\n\nMándeme una foto de su acta de nacimiento y otra de su INE, por favor.",btn:"Enviar fotos"};
-  say("me",intro.me);
+  say("me",meText||intro.me);
   say("bot",intro.bot);
   next.textContent=intro.btn;next.disabled=false;
 }
@@ -188,6 +191,7 @@ function advance(){
   if(!cur){start(CASES[0]);return;}
   const cs=cur;
   if(step===0){
+    if(voz){say("me",voz);voz=null;}
     if(cs.blur){
       say("me",docHtml("ACTA DE NACIMIENTO (EJEMPLO)",["Nombre: Guadalupe","Apellidos: Ramírez Torres","Nacimiento: 25/11/1960"],true));
       say("bot","No alcanzo a leer bien la foto del acta. ¿Me la puede tomar otra vez, cerca de una ventana con luz y sin que se mueva el teléfono?");
@@ -205,12 +209,13 @@ function advance(){
     say("bot","Encontré "+(errs.length===1?"un error":errs.length+" errores")+":\n\n"+errs.map(e=>"• "+e.txt).join("\n")+"\n\nPor un punto o una letra, ante la ley puede parecer otra persona. Esto puede detener herencias, testamentos, seguros o su pensión.\n\nSí se puede corregir. ¿Quiere que yo haga el trámite por usted?",{cite:"validación de CURP (RENAPO) y comparación de datos"});
     next.textContent="Sí, corríjalo";step=1;
   }else if(step===1){
-    say("me","Sí, por favor");
+    say("me",voz||"Sí, por favor");voz=null;
     const k=cs._errs.map(e=>e.k);
     const tipo=k.includes("fecha")&&!k.includes("nombre")?"corrección de datos de la CURP y del registro":"corrección de registro de acta";
     say("bot",`Preparé su solicitud de ${tipo}:\n\n• Solicitante: ${cs.ine.nombre} ${cs.ine.ap1} ${cs.ine.ap2}\n• CURP: ${cs.ine.curp}\n• Qué se corrige: ${cs._errs.map(e=>e.k==="familia"?"nombre de la madre en el acta del hijo":e.k).join(", ")}\n• Documentos: acta con el error, identificación oficial\n\nPara enviarla necesito confirmar que es usted. Tómese una selfie sosteniendo su INE.`,{cite:FUENTE});
     next.textContent="Mandar selfie";step=2;
   }else if(step===2){
+    if(voz){say("me",voz);voz=null;}
     say("me","📷 Selfie con INE");
     say("bot","Listo, confirmé su identidad.",{sim:true});
     say("bot","Envié su solicitud al Registro Civil. Folio RC-2026-104827.\n\nEl plazo oficial para resolver es de hasta 5 días. Le aviso por aquí en cuanto quede.",{sim:true,cite:FUENTE});
@@ -227,6 +232,39 @@ pintarVoz();if(window.speechSynthesis)speechSynthesis.onvoiceschanged=()=>{};
 $("#voz").onclick=()=>{vozOn=!vozOn;try{localStorage.setItem("vozOn",vozOn?"1":"0")}catch(e){}if(!vozOn&&window.speechSynthesis)speechSynthesis.cancel();pintarVoz();};$("#reset").onclick=()=>start(cur||CASES[0]);
 msgs.innerHTML='<p style="margin:auto;text-align:center;color:var(--muted);font-size:1.05rem;max-width:28ch">Toque <b>Iniciar demo</b> o elija un caso para empezar la conversación con voz.</p>';
 next.textContent="Iniciar demo";
+
+function nota(t){const p=document.createElement("p");p.className="nota";p.textContent=t;msgs.appendChild(p);msgs.scrollTop=msgs.scrollHeight;}
+function elegirCaso(n){
+  if(/HIJ|ABOGAD|MADRE|MAMA/.test(n))return CASES[0];
+  if(/PENSION|INICIAL/.test(n))return CASES[1];
+  if(/IMSS|FECHA|CURP/.test(n))return CASES[2];
+  if(/BANCO/.test(n))return CASES[3];
+  return CASES[1];
+}
+function manejarVoz(t){
+  const n=norm(t);
+  if(!cur||step===99){start(elegirCaso(n),t);return;}
+  if(step===1&&/\bNO\b|DESPUES|AHORITA NO/.test(n)&&!/\bSI\b/.test(n)){
+    say("me",t);
+    say("bot","Entendido, no haré ningún cambio. Cuando quiera corregirlo, mándeme un mensaje o un audio.");
+    step=99;next.textContent="Reiniciar caso";return;
+  }
+  if(step===3){say("me",t);advance();return;}
+  voz=t;advance();
+}
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,escuchando=false;
+function pintarMic(){const b=$("#mic");b.setAttribute("aria-pressed",escuchando);b.textContent=escuchando?"● Escuchando…":"🎤 Hablar";}
+$("#mic").onclick=()=>{
+  if(!SR){nota("Este navegador no permite dictar. Ábralo en Chrome o Edge desde acta-clara.vercel.app.");return;}
+  if(escuchando){try{rec.stop()}catch(e){}return;}
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  rec=new SR();rec.lang="es-MX";rec.interimResults=false;rec.maxAlternatives=1;
+  rec.onresult=e=>{const t=(e.results[0]&&e.results[0][0].transcript||"").trim();if(t)manejarVoz(t.charAt(0).toUpperCase()+t.slice(1));};
+  rec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed")nota("No tengo permiso para usar el micrófono aquí. Ábralo en Chrome desde acta-clara.vercel.app y acepte el permiso.");else if(e.error==="no-speech")nota("No escuché nada. Toque Hablar e intente de nuevo.");};
+  rec.onend=()=>{escuchando=false;pintarMic();};
+  try{rec.start();escuchando=true;pintarMic();}catch(e){nota("No pude encender el micrófono. Intente de nuevo.");}
+};
 </script>
 </body>
 </html>
