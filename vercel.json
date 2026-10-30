@@ -1,7 +1,6 @@
 {
-  "rewrites": [
-    { "source": "/v1/(.*)", "destination": "/api/index" },
-    { "source": "/docs", "destination": "/api/index" },
-    { "source": "/openapi.json", "destination": "/api/index" }
-  ]
+  "functions": {
+    "api/index.py": { "includeFiles": "index.html" }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }]
 }

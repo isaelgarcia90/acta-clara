@@ -17,7 +17,9 @@ from datetime import date
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Security
+from fastapi.responses import HTMLResponse
 from fastapi.security import APIKeyHeader
+from pathlib import Path
 from pydantic import BaseModel
 
 app = FastAPI(title="Acta Clara API", version="0.1.0",
@@ -166,6 +168,16 @@ def ver_solicitud(folio: str):
     if folio not in SOLICITUDES:
         raise HTTPException(404, "Folio no encontrado.")
     return SOLICITUDES[folio]
+
+
+DEMO = Path(__file__).resolve().parent.parent / "index.html"
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def demo():
+    if not DEMO.exists():
+        raise HTTPException(404, "No se encontró index.html.")
+    return HTMLResponse(DEMO.read_text(encoding="utf-8"))
 
 
 @app.get("/v1/salud")
