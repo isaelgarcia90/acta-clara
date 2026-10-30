@@ -19,7 +19,6 @@ from typing import Optional
 from fastapi import Depends, FastAPI, HTTPException, Security
 from fastapi.responses import HTMLResponse
 from fastapi.security import APIKeyHeader
-from pathlib import Path
 from pydantic import BaseModel
 
 app = FastAPI(title="Acta Clara API", version="0.1.0",
@@ -170,14 +169,16 @@ def ver_solicitud(folio: str):
     return SOLICITUDES[folio]
 
 
-DEMO = Path(__file__).resolve().parent.parent / "index.html"
+try:
+    from api.demo_html import HTML as DEMO_HTML
+except ImportError:
+    from demo_html import HTML as DEMO_HTML
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/api/index", response_class=HTMLResponse, include_in_schema=False)
 def demo():
-    if not DEMO.exists():
-        raise HTTPException(404, "No se encontró index.html.")
-    return HTMLResponse(DEMO.read_text(encoding="utf-8"))
+    return HTMLResponse(DEMO_HTML)
 
 
 @app.get("/v1/salud")
