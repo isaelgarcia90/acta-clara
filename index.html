@@ -185,6 +185,7 @@ function start(cs){
   next.textContent=intro.btn;next.disabled=false;
 }
 function advance(){
+  if(!cur){start(CASES[0]);return;}
   const cs=cur;
   if(step===0){
     if(cs.blur){
@@ -223,8 +224,9 @@ const box=$("#cases");
 CASES.forEach(cs=>{const b=document.createElement("button");b.className="case";b.type="button";b.dataset.id=cs.id;b.innerHTML=`<b>${cs.id}. ${cs.t}</b><span>${cs.d}</span>`;b.onclick=()=>start(cs);box.appendChild(b);});
 next.onclick=advance;
 pintarVoz();if(window.speechSynthesis)speechSynthesis.onvoiceschanged=()=>{};
-$("#voz").onclick=()=>{vozOn=!vozOn;try{localStorage.setItem("vozOn",vozOn?"1":"0")}catch(e){}if(!vozOn&&window.speechSynthesis)speechSynthesis.cancel();pintarVoz();};$("#reset").onclick=()=>start(cur);
-start(CASES[0]);
+$("#voz").onclick=()=>{vozOn=!vozOn;try{localStorage.setItem("vozOn",vozOn?"1":"0")}catch(e){}if(!vozOn&&window.speechSynthesis)speechSynthesis.cancel();pintarVoz();};$("#reset").onclick=()=>start(cur||CASES[0]);
+msgs.innerHTML='<p style="margin:auto;text-align:center;color:var(--muted);font-size:1.05rem;max-width:28ch">Toque <b>Iniciar demo</b> o elija un caso para empezar la conversación con voz.</p>';
+next.textContent="Iniciar demo";
 </script>
 </body>
 </html>
