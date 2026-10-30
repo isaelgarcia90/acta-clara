@@ -165,9 +165,24 @@ const FUENTE="Plataforma Nacional del Registro Civil (miregistrocivil.gob.mx), c
 function start(cs){
   cur=cs;step=0;msgs.innerHTML="";if(window.speechSynthesis)speechSynthesis.cancel();
   document.querySelectorAll(".case").forEach(b=>b.setAttribute("aria-pressed",b.dataset.id==cs.id));
-  say("me","Hola, me rechazaron un trámite por mi acta");
-  say("bot","Hola, buenas tardes. Le ayudo a revisar su acta de nacimiento.\n\nMándeme una foto de su acta y otra de su INE, por favor.");
-  next.textContent="Enviar fotos";next.disabled=false;
+  const intro=cs.hijo?{
+      me:"Hola, el abogado de la familia me dijo que mi nombre no está igual en el acta de mi hijo",
+      bot:"Hola, buenas tardes. Le ayudo a revisarlo.\n\nMándeme tres fotos, por favor: su acta de nacimiento, su INE y el acta de nacimiento de su hijo.",btn:"Enviar las 3 fotos"}
+    :/iniciales/i.test(cs.t)?{
+      me:"Hola, en mi pensión me dijeron que mi nombre no coincide con mi acta",
+      bot:"Hola, buenas tardes. Le ayudo a revisar su acta.\n\nMándeme una foto de su acta de nacimiento y otra de su INE, por favor.",btn:"Enviar fotos"}
+    :/fecha/i.test(cs.t)?{
+      me:"Hola, en el IMSS me dijeron que mi fecha de nacimiento no coincide con mi CURP",
+      bot:"Hola, buenas tardes. Le ayudo a revisar su fecha.\n\nMándeme una foto de su acta de nacimiento y otra de su INE, donde viene su CURP.",btn:"Enviar fotos"}
+    :cs.blur?{
+      me:"Hola, quiero revisar si mi acta tiene algún error",
+      bot:"Hola, buenas tardes. Con gusto la reviso.\n\nMándeme una foto de su acta de nacimiento y otra de su INE, por favor.",btn:"Enviar foto"}
+    :{
+      me:"Hola, en el banco me rechazaron un trámite y no sé si es por mi acta",
+      bot:"Hola, buenas tardes. Le ayudo a revisarlo.\n\nMándeme una foto de su acta de nacimiento y otra de su INE, por favor.",btn:"Enviar fotos"};
+  say("me",intro.me);
+  say("bot",intro.bot);
+  next.textContent=intro.btn;next.disabled=false;
 }
 function advance(){
   const cs=cur;
